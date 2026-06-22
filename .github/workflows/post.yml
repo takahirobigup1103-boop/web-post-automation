@@ -1,0 +1,49 @@
+name: Threads 自動投稿
+
+on:
+  schedule:
+    - cron: '0 22 * * *'   # 07:00 JST (morning)
+    - cron: '0 1 * * *'    # 10:00 JST (midmorning)
+    - cron: '0 4 * * *'    # 13:00 JST (afternoon)
+    - cron: '0 7 * * *'    # 16:00 JST (late_afternoon)
+    - cron: '0 11 * * *'   # 20:00 JST (evening)
+  workflow_dispatch:        # 手動実行ボタン
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install anthropic requests python-dotenv requests-oauthlib
+
+      - name: Post to Threads
+        env:
+          TZ: Asia/Tokyo
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          POST_HASHTAGS: "#ホームページ制作 #中小企業 #集客 #web制作"
+          POST_TO_X: "false"
+          LINE_URL: "https://lin.ee/OmRxAFw"
+        run: python post.py
+
+      - name: 投稿履歴を保存
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add post_history.json
+          git diff --staged --quiet || git commit -m "auto: post history [skip ci]"
+          git push

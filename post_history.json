@@ -1,0 +1,28 @@
+{
+  "2026-06-15": {
+    "afternoon": true
+  },
+  "2026-06-16": {
+    "morning": true,
+    "afternoon": true,
+    "evening": true
+  },
+  "2026-06-17": {
+    "morning": true,
+    "afternoon": true
+  },
+  "2026-06-18": {
+    "morning": true,
+    "afternoon": true
+  },
+  "2026-06-19": {
+    "evening": true
+  },
+  "2026-06-21": {
+    "evening": true
+  },
+  "2026-06-22": {
+    "morning": true,
+    "evening": true
+  }
+}
