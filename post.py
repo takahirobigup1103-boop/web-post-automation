@@ -315,9 +315,21 @@ def log(message: str):
 
 def main():
     dry_run = "--dry-run" in sys.argv
-
     force = "--force" in sys.argv
-    slot = get_current_slot()
+
+    # --slot SLOTNAME で時間外でも指定スロットで投稿（GitHub Actions用）
+    slot_override = None
+    if "--slot" in sys.argv:
+        idx = sys.argv.index("--slot")
+        if idx + 1 < len(sys.argv):
+            slot_override = sys.argv[idx + 1]
+
+    if slot_override:
+        slot_index = next((i for i, (n, s, e) in enumerate(SLOTS) if n == slot_override), 0)
+        slot = (slot_override, slot_index)
+    else:
+        slot = get_current_slot()
+
     if slot is None and not dry_run and not force:
         print(f"[{datetime.now().strftime('%H:%M')}] 投稿時間外のためスキップ")
         return

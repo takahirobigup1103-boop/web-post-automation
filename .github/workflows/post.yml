@@ -7,7 +7,7 @@ on:
     - cron: '0 4 * * *'    # 13:00 JST (afternoon)
     - cron: '0 7 * * *'    # 16:00 JST (late_afternoon)
     - cron: '0 11 * * *'   # 20:00 JST (evening)
-  workflow_dispatch:        # 手動実行ボタン
+  workflow_dispatch:        # 手動実行（テスト用）
 
 jobs:
   post:
@@ -38,7 +38,16 @@ jobs:
           POST_HASHTAGS: "#ホームページ制作 #中小企業 #集客 #web制作"
           POST_TO_X: "false"
           LINE_URL: "https://lin.ee/OmRxAFw"
-        run: python post.py
+        run: |
+          SCHEDULE="${{ github.event.schedule }}"
+          case "$SCHEDULE" in
+            "0 22 * * *") python post.py --slot morning ;;
+            "0 1 * * *")  python post.py --slot midmorning ;;
+            "0 4 * * *")  python post.py --slot afternoon ;;
+            "0 7 * * *")  python post.py --slot late_afternoon ;;
+            "0 11 * * *") python post.py --slot evening ;;
+            *)             python post.py --slot morning --force ;;
+          esac
 
       - name: 投稿履歴を保存
         run: |
