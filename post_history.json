@@ -41,6 +41,7 @@
   "2026-06-28": {
     "morning": true,
     "midmorning": true,
-    "afternoon": true
+    "afternoon": true,
+    "late_afternoon": true
   }
 }
