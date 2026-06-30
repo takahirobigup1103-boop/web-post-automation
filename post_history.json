@@ -1,11 +1,4 @@
 {
-  "2026-06-24": {
-    "morning": true,
-    "midmorning": true,
-    "afternoon": true,
-    "late_afternoon": true,
-    "evening": true
-  },
   "2026-06-25": {
     "morning": true,
     "midmorning": true,
@@ -47,5 +40,8 @@
     "afternoon": true,
     "late_afternoon": true,
     "evening": true
+  },
+  "2026-07-01": {
+    "morning": true
   }
 }
