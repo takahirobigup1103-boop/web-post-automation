@@ -42,6 +42,7 @@
     "evening": true
   },
   "2026-07-01": {
-    "morning": true
+    "morning": true,
+    "midmorning": true
   }
 }
