@@ -44,6 +44,7 @@
   "2026-07-04": {
     "morning": true,
     "midmorning": true,
-    "afternoon": true
+    "afternoon": true,
+    "late_afternoon": true
   }
 }
