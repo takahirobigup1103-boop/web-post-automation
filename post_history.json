@@ -1,8 +1,11 @@
 {
+  "2026-06-27": {
+    "morning": true,
+    "late_afternoon": true,
+    "evening": true
+  },
   "2026-06-29": {
     "morning": true,
-    "midmorning": true,
-    "afternoon": true,
     "late_afternoon": true,
     "evening": true
   },
@@ -10,41 +13,27 @@
     "morning": true,
     "midmorning": true,
     "afternoon": true,
-    "late_afternoon": true,
     "evening": true
   },
   "2026-07-01": {
     "morning": true,
     "midmorning": true,
     "afternoon": true,
-    "late_afternoon": true,
-    "evening": true
+    "late_afternoon": true
   },
   "2026-07-02": {
     "morning": true,
-    "midmorning": true,
-    "afternoon": true,
-    "late_afternoon": true,
-    "evening": true
-  },
-  "2026-07-03": {
-    "morning": true,
-    "midmorning": true,
-    "afternoon": true,
     "late_afternoon": true,
     "evening": true
   },
   "2026-07-04": {
+    "afternoon": true,
     "morning": true,
     "midmorning": true,
-    "afternoon": true,
     "late_afternoon": true,
     "evening": true
   },
   "2026-07-05": {
-    "morning": true,
-    "midmorning": true,
-    "afternoon": true,
     "late_afternoon": true,
     "evening": true
   }
