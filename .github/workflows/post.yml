@@ -1,12 +1,19 @@
 name: Threads 自動投稿
 
+# GitHubのcronは毎時0分が混雑して遅延・スキップされやすいため、
+# 10分にずらし、さらに40分に保険実行を置く（投稿済みなら自動スキップ）
 on:
   schedule:
-    - cron: '0 22 * * *'   # 07:00 JST (morning)
-    - cron: '0 1 * * *'    # 10:00 JST (midmorning)
-    - cron: '0 4 * * *'    # 13:00 JST (afternoon)
-    - cron: '0 7 * * *'    # 16:00 JST (late_afternoon)
-    - cron: '0 11 * * *'   # 20:00 JST (evening)
+    - cron: '10 22 * * *'  # 07:10 JST (morning)
+    - cron: '40 22 * * *'  # 07:40 JST (morning 保険)
+    - cron: '10 1 * * *'   # 10:10 JST (midmorning)
+    - cron: '40 1 * * *'   # 10:40 JST (midmorning 保険)
+    - cron: '10 4 * * *'   # 13:10 JST (afternoon)
+    - cron: '40 4 * * *'   # 13:40 JST (afternoon 保険)
+    - cron: '10 7 * * *'   # 16:10 JST (late_afternoon)
+    - cron: '40 7 * * *'   # 16:40 JST (late_afternoon 保険)
+    - cron: '10 11 * * *'  # 20:10 JST (evening)
+    - cron: '40 11 * * *'  # 20:40 JST (evening 保険)
   workflow_dispatch:        # 手動実行（テスト用）
 
 jobs:
@@ -41,12 +48,12 @@ jobs:
         run: |
           SCHEDULE="${{ github.event.schedule }}"
           case "$SCHEDULE" in
-            "0 22 * * *") python post.py --slot morning ;;
-            "0 1 * * *")  python post.py --slot midmorning ;;
-            "0 4 * * *")  python post.py --slot afternoon ;;
-            "0 7 * * *")  python post.py --slot late_afternoon ;;
-            "0 11 * * *") python post.py --slot evening ;;
-            *)             python post.py --slot morning --force ;;
+            *" 22 * * *") python post.py --slot morning ;;
+            *" 11 * * *") python post.py --slot evening ;;
+            *" 1 * * *")  python post.py --slot midmorning ;;
+            *" 4 * * *")  python post.py --slot afternoon ;;
+            *" 7 * * *")  python post.py --slot late_afternoon ;;
+            *)            python post.py --slot morning --force ;;
           esac
 
       - name: 投稿履歴を保存
