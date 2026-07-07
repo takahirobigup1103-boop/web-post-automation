@@ -1,20 +1,42 @@
 name: Threads 自動投稿
 
-# GitHubのcronは毎時0分が混雑して遅延・スキップされやすいため、
-# 10分にずらし、さらに40分に保険実行を置く（投稿済みなら自動スキップ）
+# 自己修復型スケジュール:
+# GitHubのcronは大幅遅延・スキップが常態のため、時間帯ごとに複数回チェックを走らせ、
+# 「今が投稿時間帯」かつ「そのスロット未投稿」のときだけ投稿する方式。
+# 遅延しても窓の中に落ちた実行が拾うので、深夜投稿・時間帯外れが起きない。
 on:
   schedule:
-    - cron: '10 22 * * *'  # 07:10 JST (morning)
-    - cron: '40 22 * * *'  # 07:40 JST (morning 保険)
-    - cron: '10 1 * * *'   # 10:10 JST (midmorning)
-    - cron: '40 1 * * *'   # 10:40 JST (midmorning 保険)
-    - cron: '10 4 * * *'   # 13:10 JST (afternoon)
-    - cron: '40 4 * * *'   # 13:40 JST (afternoon 保険)
-    - cron: '10 7 * * *'   # 16:10 JST (late_afternoon)
-    - cron: '40 7 * * *'   # 16:40 JST (late_afternoon 保険)
-    - cron: '10 11 * * *'  # 20:10 JST (evening)
-    - cron: '40 11 * * *'  # 20:40 JST (evening 保険)
+    # morning 07:00-09:59 JST (22:00-00:59 UTC)
+    - cron: '10 22 * * *'
+    - cron: '40 22 * * *'
+    - cron: '10 23 * * *'
+    - cron: '40 23 * * *'
+    # midmorning 10:00-12:59 JST (01:00-03:59 UTC)
+    - cron: '10 1 * * *'
+    - cron: '40 1 * * *'
+    - cron: '10 2 * * *'
+    - cron: '40 2 * * *'
+    # afternoon 13:00-15:59 JST (04:00-06:59 UTC)
+    - cron: '10 4 * * *'
+    - cron: '40 4 * * *'
+    - cron: '10 5 * * *'
+    - cron: '40 5 * * *'
+    # late_afternoon 16:00-18:59 JST (07:00-09:59 UTC)
+    - cron: '10 7 * * *'
+    - cron: '40 7 * * *'
+    - cron: '10 8 * * *'
+    - cron: '40 8 * * *'
+    # evening 20:00-23:59 JST (11:00-14:59 UTC)
+    - cron: '10 11 * * *'
+    - cron: '40 11 * * *'
+    - cron: '10 12 * * *'
+    - cron: '40 12 * * *'
   workflow_dispatch:        # 手動実行（テスト用）
+
+# 同時実行を直列化して二重投稿を防ぐ
+concurrency:
+  group: threads-post
+  cancel-in-progress: false
 
 jobs:
   post:
@@ -25,14 +47,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 依存インストール前に軽量チェック（時間帯外・投稿済みなら即終了して実行時間を節約）
+      - name: 投稿要否チェック
+        id: check
+        env:
+          TZ: Asia/Tokyo
+        run: |
+          RESULT=$(python3 <<'EOF'
+          import json, datetime
+          SLOTS = [("morning",7,9),("midmorning",10,12),("afternoon",13,15),("late_afternoon",16,18),("evening",20,23)]
+          now = datetime.datetime.now()
+          slot = next((n for n, s, e in SLOTS if s <= now.hour <= e), None)
+          if slot is None:
+              print("skip"); raise SystemExit
+          try:
+              hist = json.load(open("post_history.json"))
+          except Exception:
+              hist = {}
+          print("skip" if hist.get(now.strftime("%Y-%m-%d"), {}).get(slot) else "go")
+          EOF
+          )
+          echo "result=$RESULT" >> "$GITHUB_OUTPUT"
+          echo "判定: $RESULT"
+
       - uses: actions/setup-python@v5
+        if: steps.check.outputs.result == 'go' || github.event_name == 'workflow_dispatch'
         with:
           python-version: '3.11'
 
       - name: Install dependencies
+        if: steps.check.outputs.result == 'go' || github.event_name == 'workflow_dispatch'
         run: pip install anthropic requests python-dotenv requests-oauthlib
 
       - name: Post to Threads
+        if: steps.check.outputs.result == 'go' || github.event_name == 'workflow_dispatch'
         env:
           TZ: Asia/Tokyo
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
@@ -46,20 +94,18 @@ jobs:
           POST_TO_X: "false"
           LINE_URL: "https://lin.ee/OmRxAFw"
         run: |
-          SCHEDULE="${{ github.event.schedule }}"
-          case "$SCHEDULE" in
-            *" 22 * * *") python post.py --slot morning ;;
-            *" 11 * * *") python post.py --slot evening ;;
-            *" 1 * * *")  python post.py --slot midmorning ;;
-            *" 4 * * *")  python post.py --slot afternoon ;;
-            *" 7 * * *")  python post.py --slot late_afternoon ;;
-            *)            python post.py --slot morning --force ;;
-          esac
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            python post.py --force
+          else
+            python post.py
+          fi
 
       - name: 投稿履歴を保存
+        if: steps.check.outputs.result == 'go' || github.event_name == 'workflow_dispatch'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main || true
           git add post_history.json
           git diff --staged --quiet || git commit -m "auto: post history [skip ci]"
           git push
