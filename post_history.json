@@ -38,6 +38,7 @@
     "morning": true,
     "midmorning": true,
     "afternoon": true,
-    "late_afternoon": true
+    "late_afternoon": true,
+    "evening": "「県外から問い合わせが来るようになった」"
   }
 }
