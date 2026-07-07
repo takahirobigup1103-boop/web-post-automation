@@ -55,8 +55,8 @@ def already_posted(slot_name: str) -> bool:
         return False
 
 
-def record_post(slot_name: str):
-    """投稿済みを記録"""
+def record_post(slot_name: str, hook: str = ""):
+    """投稿済みを記録。hookにはメイン投稿の書き出しを保存（重複防止に使う）"""
     today = datetime.now().strftime("%Y-%m-%d")
     try:
         with open(HISTORY_FILE) as f:
@@ -65,7 +65,8 @@ def record_post(slot_name: str):
         history = {}
     if today not in history:
         history[today] = {}
-    history[today][slot_name] = True
+    # 文字列も真値なので already_posted / ワークフローの事前チェックと互換
+    history[today][slot_name] = hook[:60] if hook else True
     # 7日分だけ保持
     keys = sorted(history.keys())
     if len(keys) > 7:
@@ -73,6 +74,21 @@ def record_post(slot_name: str):
             del history[old]
     with open(HISTORY_FILE, "w") as f:
         json.dump(history, f, ensure_ascii=False, indent=2)
+
+
+def get_recent_hooks() -> list[str]:
+    """直近7日間に投稿したメイン投稿の書き出しを返す（重複防止用）"""
+    try:
+        with open(HISTORY_FILE) as f:
+            history = json.load(f)
+    except Exception:
+        return []
+    hooks = []
+    for day in sorted(history.keys()):
+        for slot, value in history[day].items():
+            if isinstance(value, str):
+                hooks.append(value)
+    return hooks
 
 
 # 反応が高いカテゴリは出現率を上げる（インプレッション実績に応じて調整）
@@ -134,54 +150,54 @@ def get_greeting() -> str:
     return greeting
 
 
-def generate_post(topic: dict) -> tuple[str, str, str]:
+def generate_post(topic: dict, recent_hooks: list[str] = None) -> tuple[str, str, str]:
     """
-    3投稿スレッド形式で生成。スタイルをランダムにローテーション。
+    3投稿スレッド形式で生成。スタイルを重み付きローテーション。
+    recent_hooks: 直近7日間のメイン投稿の書き出しリスト（重複防止用）
     Returns: (メイン投稿, コメント1, コメント2)
+    ※Threadsではハッシュタグは逆効果（1つしか機能せずbot臭になる）のため付けない
     """
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    hashtags = os.environ.get(
-        "POST_HASHTAGS",
-        "#ホームページ制作 #中小企業 #集客 #web制作"
-    )
     angle = random.choice(topic["angles"])
+    recent_hooks_block = "\n".join(f"- {h}" for h in (recent_hooks or [])) or "（履歴なし）"
 
-    # 投稿スタイルをランダムに選択（4種類ローテーション）
+    # 投稿スタイルを重み付きで選択（実測: 行動→結果型が250viewsで圧勝）
     styles = [
         {
+            "name": "行動→結果型",
+            "weight": 3.0,
+            "main_hint": "「〇〇したら、△△が増えた/変わった/来た」という結果の変化を引用形式で書く。〇〇は誰でも今日できる小さな行動（電話番号を上に移す、写真を1枚差し替える等）、△△は経営者が本当に欲しい結果（電話・問い合わせ・来店・応募）。2行目で「先月、〇〇業の社長から連絡をもらいました」のように実在感のある人物と業種を添える。数字は盛らない。「2倍」より「週に1〜2件増えた」のような控えめな現実感が信頼される",
+            "body_hint": "何をどう変えたのかを具体的に見せ、「特別なことは何もしていない」という再現可能性を強調する",
+        },
+        {
             "name": "損失提示型",
-            "main_hint": "「え、まだ〇〇してないの？」「毎月〇〇人のお客さんが競合に流れていますか」など、損失や危機感を数字・具体例で提示してスクロールを止める",
+            "weight": 1.0,
+            "main_hint": "「毎月〇〇人のお客さんが競合に流れている」など、損失や危機感を数字・具体例で提示してスクロールを止める",
             "body_hint": "「このままだと〇〇を損し続ける」という現実を番号リストで整理し、今すぐできる一歩で締める",
         },
         {
             "name": "Before-After型",
+            "weight": 1.0,
             "main_hint": "「〇〇しているとこうなります」「〇〇している方へ、それ〇〇が原因です」など状況描写から入る",
             "body_hint": "【Before】よくある失敗 → 【After】改善後の変化を対比で見せる。読者が「これ変えられそう」と思える構造にする",
         },
         {
             "name": "実績・共感型",
+            "weight": 0.8,
             "main_hint": "「〇〇したら△△になったという連絡をもらいました」など実話ベースの一言から入る",
             "body_hint": "変わる前後の具体的な数字やエピソードを示してから、読者の悩みへの共感に展開する",
         },
-        {
-            "name": "悩み言語化型",
-            "main_hint": "「〇〇で△△が続いている方へ」「やりたいけど〇〇で動けていない方へ」など当事者に語りかける",
-            "body_hint": "悩みの正体をやさしく言語化して「実はこういうことなんです」という気づきを与え、解決の入口をほのめかす",
-        },
     ]
-    style = random.choice(styles)
+    style = random.choices(styles, weights=[s["weight"] for s in styles], k=1)[0]
 
-    # 締め文言をランダムに選択（多様性を出す）
-    closings = [
-        "まずは話すだけで大丈夫です",
-        "費用の相場感も正直にお伝えします",
-        "0円でできることから一緒に整理します",
-        "一緒に一歩だけ動いてみませんか",
-        "神奈川・小田原を拠点に活動しています",
-        "何から始めるか、一緒に考えましょう",
-        "ぼったくりません。正直にお話しします",
+    # CTAの型をローテーション（毎回同じ定型文はbot臭・売り込み臭になるため）
+    cta_types = [
+        ("配布型", "「スマホでできる集客チェックリストの完全版、LINEで無料配布してます。プロフィールからどうぞ」のような、登録する理由を渡す締め方", 0.35),
+        ("宣言型", "「困ったら小田原の鈴木を思い出してください。プロフィールにLINEがあります」のような、押しつけない存在表明の締め方", 0.25),
+        ("無CTA型", "CTAを完全に省き、価値提供だけで気持ちよく終える（信頼残高を貯める回）。LINEにもプロフィールにも一切触れない", 0.20),
+        ("相談型", "「気軽にLINEで相談してみてください😊（プロフィールから）」のような直接の相談呼びかけ", 0.20),
     ]
-    closing = random.choice(closings)
+    cta = random.choices(cta_types, weights=[c[2] for c in cta_types], k=1)[0]
 
     # 月額伴走プランへの言及（約4割の投稿にだけ入れる。毎回だと売り込み臭くなる）
     mention_plan = random.random() < 0.4
@@ -224,34 +240,48 @@ def generate_post(topic: dict) -> tuple[str, str, str]:
 - 1行目は22文字以内。数字・断言・会話の引用のどれかで始める
 - 「〜ませんか？」「〜ありませんか？」は使用禁止（使いすぎて読者に飽きられているため）
 - 良い1行目の例：
+  ・「電話番号を上に移したら、電話が増えた」（行動→結果。実測で最も反応が良い）
   ・「月3万円の求人広告、応募ゼロ。」（数字＋現実）
   ・「見積書1枚に2時間。」（数字＋断言）
-  ・「社長、それ全部自分でやってるんですか」（会話引用）
-  ・「HPがない会社、まず検索結果に存在しない。」（断言）
+- 【フックのNGパターン（実測で反応が悪い。絶対に避ける）】
+  ・停滞独白：「まあいいか」「動けてない」「変わってないな…」など読者の不作為をなぞるだけの引用。罪悪感を刺激するだけで、いいねを押すと図星を認めることになるため経営者は絶対に押さない
+  ・説教・啓発：「AIって大手のものでしょ」型の、読者を「遅れている側」に置く構図。防衛反応を生む
 - 2行目以降で状況を具体化し、「これ、うちのことだ」と思わせる
 
+【リプライ誘発（メイン投稿の締め・必須）】
+メイン投稿の最後の1行は、読者が10秒で答えられる質問で締めること。以下のどれかの型を使う：
+・二択型「みなさんの会社は、電話派ですか？LINE派ですか？」
+・自分の答え先出し型「ちなみにうちは〇〇でした。みなさんの業種ではどうですか？」
+・数字記入型「見積書1枚、何分かかってますか？」
+※抽象的な質問（「どう思いますか？」）は禁止。「〜ませんか？」も禁止。
+
+【重複禁止（厳守）】
+以下は直近に投稿した書き出しです。テーマ・言い回し・フックが類似する投稿を作ってはいけません。
+同じ悩みを扱う場合も、必ず別の業種・別の場面・別の切り口で書くこと：
+{recent_hooks_block}
+
 【リサーチ・根拠】
-投稿内に具体的な数字・統計・調査結果を1つ含めてください。
-実際の調査・統計に基づく内容を自然に使ってください。
+コメント1またはコメント2に、具体的な数字・統計・調査結果を1つ自然に含めてください。
+※メイン投稿には統計を入れない（長くなりフックが薄まるため）。「※」や出典の括弧書きは使わず、文章に溶け込ませること。
 {plan_block}
 【3投稿スレッドのフォーマット（厳守）】
 
 ■ メイン投稿（80〜120文字）
 - 上記フックルールに従った、スクロールが止まる書き出し
-- 続きへの期待を残して終わる（「続きはコメントで」は書かない）
+- 最後は10秒で答えられる質問で締める（リプライ誘発ルール参照）
 - ハッシュタグ・URLは書かない
 
 ■ コメント1（120〜160文字）
-- {style["name"]}のスタイルで展開する
-- 「実はこういうことなんです」という気づきを与える
-- 解決策の存在をほのめかすが、まだ言わない
+- 「今すぐスマホで確認できる3点チェック」のような番号付きリスト形式にすること
+  例：「①電話番号は画面の上半分にあるか ②スマホで文字がつぶれていないか ③営業時間は最新か」
+- 読者が「あとで見返したい」と保存したくなる実用性を最優先する。抽象論・共感の繰り返しは禁止
+- 3つのうち1つは今日5分でできるものにする
 - URLは書かない
 
 ■ コメント2（120〜160文字）
 - 今日からできる具体的な一歩を1つだけ（無料・簡単・すぐできる）
 - 親身に伴走する姿勢・ぼったくらない姿勢を自然に表現する
-- 「{closing}」という一文を自然な形で入れる
-- 最後は「気軽にLINEで相談してみてください😊（プロフィールから）」
+- 締め方は【{cta[0]}】：{cta[1]}
 - URLは書かない
 
 必ず以下の形式のみで出力してください（説明文なし、区切り文字を正確に使う）:
@@ -287,7 +317,7 @@ def generate_post(topic: dict) -> tuple[str, str, str]:
     comment1 = extract(response_text, "COMMENT1").replace("**", "")
     comment2 = extract(response_text, "COMMENT2").replace("**", "")
 
-    return f"{main}\n{hashtags}", comment1, comment2
+    return main, comment1, comment2
 
 
 def post_to_x(text: str, reply_to_id: str = None) -> dict:
@@ -383,7 +413,7 @@ def main():
     topic = pick_topic(topics, slot_index)
     log(f"トピック: {topic['category']} - {topic['theme']}")
 
-    main_post, comment1, comment2 = generate_post(topic)
+    main_post, comment1, comment2 = generate_post(topic, recent_hooks=get_recent_hooks())
     log(f"--- メイン ---\n{main_post}\n")
     log(f"--- コメント1 ---\n{comment1}\n")
     log(f"--- コメント2 ---\n{comment2}\n")
@@ -410,11 +440,12 @@ def main():
         log(f"Threads投稿エラー: {e}")
         sys.exit(1)
 
-    # X投稿（.envのPOST_TO_X=trueで有効化）
+    # X投稿（.envのPOST_TO_X=trueで有効化）。Xではハッシュタグが機能するので付ける
     if os.environ.get("POST_TO_X", "false").lower() == "true":
+        hashtags = os.environ.get("POST_HASHTAGS", "")
         try:
             time.sleep(5)
-            xr = post_to_x(main_post)
+            xr = post_to_x(f"{main_post}\n{hashtags}".strip())
             xid = xr["id"]
             log(f"X メイン投稿成功: ID={xid}")
             time.sleep(5)
@@ -426,7 +457,7 @@ def main():
         except Exception as e:
             log(f"X投稿エラー（Threadsは成功済み）: {e}")
 
-    record_post(slot_name)
+    record_post(slot_name, hook=main_post.split("\n")[0])
     log("=== 投稿完了 ===")
 
 
