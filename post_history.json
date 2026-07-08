@@ -1,10 +1,4 @@
 {
-  "2026-07-01": {
-    "morning": true,
-    "midmorning": true,
-    "afternoon": true,
-    "late_afternoon": true
-  },
   "2026-07-02": {
     "morning": true,
     "late_afternoon": true,
@@ -41,5 +35,8 @@
     "afternoon": "「一回やったけど、続かなくて…」",
     "late_afternoon": "「競合がAI使い始めたら、もう追いつけない」",
     "evening": "フォロワー800人いるのに、問い合わせはゼロ。"
+  },
+  "2026-07-09": {
+    "morning": "「社長が見積書を全部作ってる会社」は、ちょっとまずい。"
   }
 }
