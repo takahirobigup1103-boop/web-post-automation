@@ -1,9 +1,4 @@
 {
-  "2026-07-02": {
-    "morning": true,
-    "late_afternoon": true,
-    "evening": true
-  },
   "2026-07-04": {
     "afternoon": true,
     "morning": true,
@@ -42,5 +37,8 @@
     "afternoon": "リール1本で、予約が3件入った。",
     "late_afternoon": "写真を1枚差し替えたら、隣の県から問い合わせが来た。",
     "evening": "見積書1枚に、2時間。"
+  },
+  "2026-07-10": {
+    "morning": "「静岡から来ました」と言われて、驚いた。"
   }
 }
