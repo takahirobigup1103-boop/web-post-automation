@@ -66,7 +66,8 @@ def record_post(slot_name: str, hook: str = ""):
     if today not in history:
         history[today] = {}
     # 文字列も真値なので already_posted / ワークフローの事前チェックと互換
-    history[today][slot_name] = hook[:60] if hook else True
+    # 書き出し＋2行目（業種・人物が入る行）まで保存して、業種の使い回しも防ぐ
+    history[today][slot_name] = hook[:110] if hook else True
     # 7日分だけ保持
     keys = sorted(history.keys())
     if len(keys) > 7:
@@ -259,6 +260,8 @@ def generate_post(topic: dict, recent_hooks: list[str] = None) -> tuple[str, str
 以下は直近に投稿した書き出しです。テーマ・言い回し・フックが類似する投稿を作ってはいけません。
 同じ悩みを扱う場合も、必ず別の業種・別の場面・別の切り口で書くこと：
 {recent_hooks_block}
+- 上記リストに登場する業種（例：板金加工、建設業）は今回使わない。飲食・美容・小売・整体治療院・士業・運送・不動産・農業・塾など幅広くローテーションする
+- 「先月、〇〇業の社長から連絡をもらいました」という2行目の定型も使い回さない。「昨日の打ち合わせで」「先日お客さんのところで」「相談をいただいた〇〇さんの話」など語り出しを毎回変える
 
 【リサーチ・根拠】
 コメント1またはコメント2に、具体的な数字・統計・調査結果を1つ自然に含めてください。
@@ -457,7 +460,7 @@ def main():
         except Exception as e:
             log(f"X投稿エラー（Threadsは成功済み）: {e}")
 
-    record_post(slot_name, hook=main_post.split("\n")[0])
+    record_post(slot_name, hook=" ／ ".join(l for l in main_post.split("\n") if l.strip())[:110])
     log("=== 投稿完了 ===")
 
 
