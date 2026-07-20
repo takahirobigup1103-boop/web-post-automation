@@ -1,0 +1,22 @@
+# Netlify 設定
+# docs/index.html を静的サイトとして公開する（ビルド不要）
+# GitHub に push されるたびに自動で再デプロイされる
+
+[build]
+  publish = "docs"
+  command = ""
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    # 検索エンジンにインデックスさせない（業務データのため）
+    X-Robots-Tag = "noindex, nofollow"
+
+# ダッシュボードは常に最新を表示させる
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
