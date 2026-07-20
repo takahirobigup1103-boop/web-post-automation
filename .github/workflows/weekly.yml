@@ -30,14 +30,24 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python weekly_review.py
 
+      # Web検索で最新トレンドを収集し、次週の投稿生成に反映させる
+      - name: 週次リサーチ
+        env:
+          TZ: Asia/Tokyo
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python research.py || echo "リサーチ失敗（週次レビューは成功済み）"
+
       - name: ダッシュボード生成
         run: python generate_dashboard.py
 
-      - name: 方針・レポート・ダッシュボードを保存
+      - name: Obsidian Vault 生成
+        run: python export_to_obsidian.py
+
+      - name: 方針・レポート・ナレッジを保存
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git pull --rebase origin main || true
-          git add strategy.json reports/ docs/
-          git diff --staged --quiet || git commit -m "weekly: 週次レビューによる方針更新 [skip ci]"
+          git add strategy.json reports/ docs/ knowledge/ research_insights.json
+          git diff --staged --quiet || git commit -m "weekly: レビュー・リサーチ・ナレッジ更新 [skip ci]"
           git push

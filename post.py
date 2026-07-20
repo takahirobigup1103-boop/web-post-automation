@@ -35,6 +35,30 @@ def load_strategy() -> dict:
 STRATEGY = load_strategy()
 
 
+def load_research() -> str:
+    """research.py が収集した最新リサーチを、プロンプト用のテキストで返す"""
+    try:
+        with open(BASE_DIR / "research_insights.json") as f:
+            insights = json.load(f).get("insights", [])
+    except Exception:
+        return ""
+    if not insights:
+        return ""
+
+    lines = []
+    for ins in insights[:2]:  # 直近2件だけ使う
+        for fact in ins.get("facts", [])[:3]:
+            lines.append(f"- {fact}")
+    if not lines:
+        return ""
+    return ("\n【最新リサーチ（実際に調査で確認された事実。使う場合はこの範囲で）】\n"
+            + "\n".join(lines)
+            + "\n※ここに無い数字を創作しない。使わなくてもよい。\n")
+
+
+RESEARCH_BLOCK = load_research()
+
+
 def load_real_cases() -> list[dict]:
     """鈴木さんの実際の制作実績のみ。架空の事例は使わない。"""
     try:
@@ -339,6 +363,7 @@ def generate_post(topic: dict, recent_hooks: list[str] = None) -> tuple[str, str
 【リサーチ・根拠】
 コメント1またはコメント2に、具体的な数字・統計・調査結果を1つ自然に含めてください。
 ※メイン投稿には統計を入れない（長くなりフックが薄まるため）。「※」や出典の括弧書きは使わず、文章に溶け込ませること。
+{RESEARCH_BLOCK}
 {plan_block}
 【3投稿スレッドのフォーマット（厳守）】
 
