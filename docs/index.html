@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#1F4A42">
+<title>Threads 週次レポート</title>
+<style>
+:root{--bg:#F7F8F7;--card:#fff;--ink:#1D2622;--soft:#66746D;--line:#E3E7E4;
+--pine:#1F4A42;--pine-s:#E8EFEC;--mikan:#DC6C2A;--up:#1F7A5C;--down:#B4462F;
+--sh:0 1px 2px rgba(29,38,34,.04),0 6px 20px rgba(29,38,34,.05);
+--f:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Noto Sans JP",system-ui,sans-serif;
+--m:"Hiragino Mincho ProN","Yu Mincho",serif}
+@media(prefers-color-scheme:dark){:root{--bg:#141917;--card:#1E2522;--ink:#E9EDE9;--soft:#98A49D;
+--line:#2E3833;--pine:#79B9A7;--pine-s:#1F2C28;--mikan:#EE8B4E;--up:#5FBF98;--down:#E0805F;
+--sh:0 1px 2px rgba(0,0,0,.25),0 8px 24px rgba(0,0,0,.3)}}
+:root[data-theme=light]{--bg:#F7F8F7;--card:#fff;--ink:#1D2622;--soft:#66746D;--line:#E3E7E4;--pine:#1F4A42;--pine-s:#E8EFEC;--mikan:#DC6C2A;--up:#1F7A5C;--down:#B4462F}
+:root[data-theme=dark]{--bg:#141917;--card:#1E2522;--ink:#E9EDE9;--soft:#98A49D;--line:#2E3833;--pine:#79B9A7;--pine-s:#1F2C28;--mikan:#EE8B4E;--up:#5FBF98;--down:#E0805F}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:840px;margin:0 auto;padding:30px 16px 56px}
+.eyebrow{display:inline-flex;gap:8px;align-items:center;font-size:12px;letter-spacing:.12em;font-weight:700;color:var(--pine);background:var(--pine-s);padding:6px 12px;border-radius:99px}
+.eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--mikan)}
+h1{font-family:var(--m);font-weight:600;font-size:clamp(23px,5.5vw,33px);margin:15px 0 5px}
+.sub{color:var(--soft);font-size:13.5px;margin:0}
+.verdict{margin:20px 0 0;background:var(--pine);color:#F2F7F4;border-radius:14px;padding:17px 19px;font-size:14.5px;line-height:1.75}
+.verdict b{display:block;font-size:11px;letter-spacing:.14em;opacity:.75;margin-bottom:5px}
+h2{font-family:var(--m);font-size:18px;font-weight:600;margin:34px 0 13px;display:flex;align-items:center;gap:10px}
+h2::after{content:"";flex:1;height:1px;background:var(--line)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px}
+.card,.pane,.voice,.tbl{background:var(--card);border:1px solid var(--line);border-radius:13px;box-shadow:var(--sh)}
+.card{padding:14px 15px}
+.k{font-size:12px;color:var(--soft)}
+.v{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px;line-height:1.2}
+.d{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.d.up{color:var(--up)}.d.down{color:var(--down)}.d.flat{color:var(--soft)}
+.pw{font-weight:400;color:var(--soft)}
+.pane{padding:15px 17px}
+.pane .k{font-weight:700;color:var(--ink);margin-bottom:5px;font-size:13px}
+.pane p{margin:0;font-size:13px;color:var(--soft);line-height:1.75}
+.pane.avoid .k{color:var(--mikan)}
+.chart{width:100%;height:120px;overflow:visible}
+.chart polyline{fill:none;stroke-width:1.6;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.lv{stroke:var(--pine)}.lm{stroke:var(--mikan);stroke-dasharray:3 2}
+.dv{fill:var(--pine)}
+.xlab{display:flex;justify-content:space-between;font-size:11px;color:var(--soft);margin-top:6px}
+.legend{display:flex;gap:14px;margin-top:9px;font-size:11.5px;color:var(--soft)}
+.lg::before{content:"";display:inline-block;width:14px;height:2px;margin-right:5px;vertical-align:middle}
+.lgv::before{background:var(--pine)}.lgm::before{background:var(--mikan)}
+.slot{display:grid;grid-template-columns:84px 1fr auto;gap:11px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.slot:last-child{border:0}
+.sn{font-size:13px;color:var(--soft)}
+.slot.best .sn{color:var(--ink);font-weight:700}
+.bar{background:var(--pine-s);border-radius:99px;height:9px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--pine);border-radius:99px}
+.slot.best .bar span{background:var(--mikan)}
+.sv{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;min-width:92px;text-align:right}
+.sv small{font-weight:400;color:var(--soft);font-size:11px}
+.voice{padding:15px 17px;margin-bottom:10px}
+.vh{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.role{font-weight:700;font-size:14px}
+.tag{font-size:10.5px;letter-spacing:.1em;color:var(--pine);background:var(--pine-s);padding:3px 9px;border-radius:99px;font-weight:700}
+.voice p{margin:0;font-size:13.5px;color:var(--soft);line-height:1.8}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sw{display:grid;grid-template-columns:112px 1fr 32px;gap:10px;align-items:center;padding:6px 0}
+.swn{font-size:12.5px}.swv{font-size:12.5px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+ol{margin:0;padding-left:19px}ol li{font-size:13.5px;margin-bottom:7px;line-height:1.75}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;letter-spacing:.08em;color:var(--soft);padding:11px 9px;border-bottom:1px solid var(--line);font-weight:700;white-space:nowrap}
+th.ta{text-align:right}
+td{padding:10px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border:0}
+tr.top{background:linear-gradient(90deg,var(--pine-s),transparent 60%)}
+.rk{color:var(--soft);font-variant-numeric:tabular-nums;width:24px;font-size:11.5px}
+tr.top .rk{color:var(--mikan);font-weight:700}
+.hk{min-width:220px;line-height:1.55}
+.meta{font-size:11px;color:var(--soft);margin-top:3px}
+.nm{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+.nm.sm{font-weight:400;color:var(--soft)}
+.mini{background:var(--pine-s);height:5px;border-radius:99px;overflow:hidden;margin-bottom:4px;min-width:50px}
+.mini span{display:block;height:100%;background:var(--pine)}
+footer{margin-top:38px;padding-top:17px;border-top:1px solid var(--line);font-size:11.5px;color:var(--soft);text-align:center}
+@media(max-width:560px){.two{grid-template-columns:1fr}.slot{grid-template-columns:70px 1fr}.sv{grid-column:2;text-align:left;min-width:0}}
+</style>
+</head><body>
+<div class="wrap"><span class="eyebrow"><i></i>THREADS 週次レポート</span>
+<h1>2026-07-20 の週</h1>
+<p class="sub">4つの役割が実測データを検討し、次週の方針を決定しました。</p>
+<div class="verdict"><b>今週の総括</b>前週の高数値は外れ値1件に支えられた見かけ上の好調であり、今週の数値が現在の実力値に近く、『具体的場面＋損失』を一語で見せるフックが安定的に機能することが改めて確認された週。</div>
+
+<h2>数字</h2>
+<div class="grid"><div class="card"><div class="k">合計 views</div><div class="v">2,845</div><div class="d down">-3986<span class="pw"> 前週比</span></div></div><div class="card"><div class="k">中央値</div><div class="v">34</div><div class="d down">-48<span class="pw"> 前週比</span></div></div><div class="card"><div class="k">最高</div><div class="v">366</div><div class="d down">-1472<span class="pw"> 前週比</span></div></div><div class="card"><div class="k">リプライ</div><div class="v">82</div><div class="d up">+11<span class="pw"> 前週比</span></div></div><div class="card"><div class="k">いいね</div><div class="v">9</div><div class="d down">-7<span class="pw"> 前週比</span></div></div><div class="card"><div class="k">投稿数</div><div class="v">38</div><div class="d up">+3<span class="pw"> 前週比</span></div></div></div>
+
+<h2>時間帯別の伸び</h2>
+<div class="pane"><div class="slot best"><div class="sn">朝7-9</div><div class="bar"><span style="width:100%"></span></div><div class="sv">103<small> 平均 / 最高366</small></div></div><div class="slot"><div class="sn">午前10-12</div><div class="bar"><span style="width:33%"></span></div><div class="sv">34<small> 平均 / 最高79</small></div></div><div class="slot"><div class="sn">昼13-15</div><div class="bar"><span style="width:66%"></span></div><div class="sv">68<small> 平均 / 最高337</small></div></div><div class="slot"><div class="sn">夕16-18</div><div class="bar"><span style="width:80%"></span></div><div class="sv">82<small> 平均 / 最高242</small></div></div><div class="slot"><div class="sn">夜20-23</div><div class="bar"><span style="width:81%"></span></div><div class="sv">83<small> 平均 / 最高280</small></div></div></div>
+
+<h2>専門家の所見</h2>
+<div class="voice"><div class="vh"><span class="role">アナリスト</span><span class="tag">数字</span></div><p>投稿数差(35→38)はAPI取得漏れ範囲内のため合計値でなく中央値・平均で比較。中央値82→34、平均195→75と大幅低下。前週は昼13-15帯が平均485と突出しており1838viewsの外れ値1件が全体を押し上げていた。今週の朝7-9が平均103と相対的に最も高く、前週の朝59より向上。前週の高平均は外れ値依存の可能性が高く、今週の数値が実力値に近いと読むのが妥当。断定はできないが外れ値除去後の水準は両週で大きく変わらない可能性がある。</p></div><div class="voice"><div class="vh"><span class="role">コピーライター</span><span class="tag">言葉</span></div><p>上位5件の共通点は『読者の会社で今も起きている具体的な場面』が一語で浮かぶこと。『ホームページより先に』『5年前のサイト』『議事録1件に45分』はシーンと損失が同時に見える。対して下位5件は鍵括弧引用・疑問・長い状況説明が多く、読者が自分ごとと感じる前に文章が終わっている。特に『「ChatGPT、なんか的外れな」』はAIリテラシー層向けで中小経営者には刺さりにくい。下位は主語が不在か抽象的すぎる点が致命的。</p></div><div class="voice"><div class="vh"><span class="role">戦略家</span><span class="tag">方針</span></div><p>上位フックの分析から『具体的数字＋読者の会社の場面』が安定してviewsを取る構造が確認できる。見落とし指摘型・ムダの可視化型の優位は今週も維持されており配分変更の根拠としては十分。下位に引用符多用型が集中しているため共感・問いかけ型をわずかに絞る。外れ値依存の実績シェア型は現状維持。朝7-9帯が今週相対的に強かった点は1週間のデータのみのため断定せず要観察とする。スタイル配分は小幅調整に留める。</p></div>
+
+<h2>次週の方針</h2>
+<div class="two">
+<div class="pane"><div class="k">重点すること</div><p>フック1文目に『読者の会社で今も起きている具体的な場面』と『時間・件数・金額などの数字』を必ず共存させること。主語は常に読者の会社。</p></div>
+<div class="pane avoid"><div class="k">避けること</div><p>鍵括弧引用・疑問文・状況説明から始まるフックは避ける。AI・ChatGPT関連ワードは中小経営者に刺さりにくいため当面封印。</p></div>
+</div>
+<div class="pane" style="margin-top:12px"><div class="k">スタイル配分（次週の投稿に自動反映済み）</div><div class="sw"><span class="swn">見落とし指摘型</span><div class="bar"><span style="width:100%"></span></div><span class="swv">3.0</span></div><div class="sw"><span class="swn">ムダの可視化型</span><div class="bar"><span style="width:83%"></span></div><span class="swv">2.5</span></div><div class="sw"><span class="swn">損失提示型</span><div class="bar"><span style="width:40%"></span></div><span class="swv">1.2</span></div><div class="sw"><span class="swn">Before-After型</span><div class="bar"><span style="width:33%"></span></div><span class="swv">1.0</span></div><div class="sw"><span class="swn">共感・問いかけ型</span><div class="bar"><span style="width:17%"></span></div><span class="swv">0.5</span></div><div class="sw"><span class="swn">実績シェア型</span><div class="bar"><span style="width:13%"></span></div><span class="swv">0.4</span></div></div>
+
+<h2>鈴木さんへの提案</h2>
+<div class="pane"><ol><li>朝7-9帯の投稿が今週相対的に強かった可能性があるため、来週も同帯の投稿内容と数値を意識的に記録し2週間分で傾向を検証する</li><li>上位5件のフック構造（場面＋数字）を自分の言葉でメモしておき、投稿作成前のチェックリストとして使う</li><li>下位に引用符フックが集中している事実を確認し、引用符スタートの投稿を来週は意図的にゼロにして影響を測る</li></ol></div>
+
+<h2>今週の全投稿（38件）</h2>
+<div class="tbl"><table>
+<thead><tr><th></th><th>投稿の書き出し</th><th class="ta">views</th><th class="ta">♥</th><th class="ta">返信</th></tr></thead>
+<tbody><tr class="top"><td class="rk">1</td><td class="hk">ホームページより先にやること、あります。<div class="meta">2026-07-14 8時</div></td><td class="nm"><div class="mini"><span style="width:100%"></span></div>366</td><td class="nm sm">1</td><td class="nm sm">2</td></tr><tr class="top"><td class="rk">2</td><td class="hk">Googleマップ、ホームページに繋いでますか。<div class="meta">2026-07-19 13時</div></td><td class="nm"><div class="mini"><span style="width:92%"></span></div>337</td><td class="nm sm">2</td><td class="nm sm">2</td></tr><tr class="top"><td class="rk">3</td><td class="hk">5年前のサイト、まだ使ってます？<div class="meta">2026-07-16 21時</div></td><td class="nm"><div class="mini"><span style="width:77%"></span></div>280</td><td class="nm sm">1</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">4</td><td class="hk">議事録1件に45分。<div class="meta">2026-07-16 16時</div></td><td class="nm"><div class="mini"><span style="width:66%"></span></div>242</td><td class="nm sm">1</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">5</td><td class="hk">口コミ0件の店と10件の店、選ぶのはどっち？<div class="meta">2026-07-15 16時</div></td><td class="nm"><div class="mini"><span style="width:60%"></span></div>218</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">6</td><td class="hk">見積書を打ちながら、商談の電話を逃した。<div class="meta">2026-07-18 8時</div></td><td class="nm"><div class="mini"><span style="width:46%"></span></div>169</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">7</td><td class="hk">請求書を夜中に打ってる社長、それ明日の売上を削ってます。<div class="meta">2026-07-15 8時</div></td><td class="nm"><div class="mini"><span style="width:38%"></span></div>140</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">8</td><td class="hk">AI、大手だけの話だと思ってた。<div class="meta">2026-07-19 16時</div></td><td class="nm"><div class="mini"><span style="width:29%"></span></div>105</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">9</td><td class="hk">見積書1枚、何分かけてますか？<div class="meta">2026-07-13 20時</div></td><td class="nm"><div class="mini"><span style="width:26%"></span></div>95</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">10</td><td class="hk">商店街のイベント、出るだけで変わる。<div class="meta">2026-07-13 8時</div></td><td class="nm"><div class="mini"><span style="width:23%"></span></div>85</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">11</td><td class="hk">スマホで調べて、そのまま電話した。<div class="meta">2026-07-13 10時</div></td><td class="nm"><div class="mini"><span style="width:22%"></span></div>79</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">12</td><td class="hk">動画、3本で止まってる。<div class="meta">2026-07-15 21時</div></td><td class="nm"><div class="mini"><span style="width:19%"></span></div>70</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">13</td><td class="hk">AI使ってる会社と使ってない会社、差がついてきた。<div class="meta">2026-07-18 13時</div></td><td class="nm"><div class="mini"><span style="width:16%"></span></div>59</td><td class="nm sm">1</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">14</td><td class="hk">竹の名刺、渡すのが楽しみになった。<div class="meta">2026-07-13 16時</div></td><td class="nm"><div class="mini"><span style="width:15%"></span></div>56</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">15</td><td class="hk">「電話したら、番号が違ってた」<div class="meta">2026-07-18 10時</div></td><td class="nm"><div class="mini"><span style="width:15%"></span></div>55</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">16</td><td class="hk">「文章、うまく書けなくて…」それ、AIが9割やってくれます。<div class="meta">2026-07-16 13時</div></td><td class="nm"><div class="mini"><span style="width:14%"></span></div>53</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">17</td><td class="hk">発信したいのに、言葉が出てこない。<div class="meta">2026-07-17 21時</div></td><td class="nm"><div class="mini"><span style="width:14%"></span></div>52</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">18</td><td class="hk">ホームページ、何ページ必要だと思いますか？<div class="meta">2026-07-14 21時</div></td><td class="nm"><div class="mini"><span style="width:11%"></span></div>40</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">19</td><td class="hk">「サイトを見て決めました」と言われた。<div class="meta">2026-07-16 10時</div></td><td class="nm"><div class="mini"><span style="width:10%"></span></div>38</td><td class="nm sm">1</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">20</td><td class="hk">「この会社、サイトもないの？」<div class="meta">2026-07-14 13時</div></td><td class="nm"><div class="mini"><span style="width:8%"></span></div>31</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">21</td><td class="hk">電話番号、スマホで見えてますか。<div class="meta">2026-07-19 8時</div></td><td class="nm"><div class="mini"><span style="width:8%"></span></div>28</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">22</td><td class="hk">夜11時の問い合わせ、拾えてますか。<div class="meta">2026-07-18 21時</div></td><td class="nm"><div class="mini"><span style="width:7%"></span></div>26</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">23</td><td class="hk">HP・SNS・AI、全部自分でやってる。<div class="meta">2026-07-14 10時</div></td><td class="nm"><div class="mini"><span style="width:6%"></span></div>23</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">24</td><td class="hk">求人票を出す前に、ホームページを直した方がいい。<div class="meta">2026-07-20 13時</div></td><td class="nm"><div class="mini"><span style="width:6%"></span></div>22</td><td class="nm sm">0</td><td class="nm sm">6</td></tr><tr class=""><td class="rk">25</td><td class="hk">「調べてから来ました」と言われた。<div class="meta">2026-07-17 13時</div></td><td class="nm"><div class="mini"><span style="width:5%"></span></div>20</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">26</td><td class="hk">本業の時間、1日何時間ありますか？<div class="meta">2026-07-16 8時</div></td><td class="nm"><div class="mini"><span style="width:5%"></span></div>20</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">27</td><td class="hk">「ITが苦手な自分が頼んでいいのか」<div class="meta">2026-07-19 21時</div></td><td class="nm"><div class="mini"><span style="width:5%"></span></div>19</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">28</td><td class="hk">「どんな会社か分かって、安心しました」<div class="meta">2026-07-17 10時</div></td><td class="nm"><div class="mini"><span style="width:4%"></span></div>16</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">29</td><td class="hk">面接に来た人の9割、すでにあなたの会社を「検索済み」です。<div class="meta">2026-07-20 10時</div></td><td class="nm"><div class="mini"><span style="width:4%"></span></div>14</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">30</td><td class="hk">HP・SNS・AI、全部後回しにしてる。<div class="meta">2026-07-15 15時</div></td><td class="nm"><div class="mini"><span style="width:4%"></span></div>14</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">31</td><td class="hk">「自分のことを話すだけで、文章ができた」<div class="meta">2026-07-20 16時</div></td><td class="nm"><div class="mini"><span style="width:4%"></span></div>13</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">32</td><td class="hk">ITが怖い、で止まっている社長へ。<div class="meta">2026-07-19 10時</div></td><td class="nm"><div class="mini"><span style="width:4%"></span></div>13</td><td class="nm sm">1</td><td class="nm sm">4</td></tr><tr class=""><td class="rk">33</td><td class="hk">「誰かに聞きたいけど、聞ける人がいない。」<div class="meta">2026-07-14 16時</div></td><td class="nm"><div class="mini"><span style="width:4%"></span></div>13</td><td class="nm sm">1</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">34</td><td class="hk">自分で作るか、外注するか。それで1年止まってる。<div class="meta">2026-07-17 8時</div></td><td class="nm"><div class="mini"><span style="width:3%"></span></div>11</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">35</td><td class="hk">「近くの〇〇」で検索して、スマホで崩れたサイトを開いた。それだけで閉じた。<div class="meta">2026-07-20 8時</div></td><td class="nm"><div class="mini"><span style="width:2%"></span></div>8</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">36</td><td class="hk">SNS、3投稿で止まった経験ある人へ。<div class="meta">2026-07-17 16時</div></td><td class="nm"><div class="mini"><span style="width:2%"></span></div>7</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">37</td><td class="hk">「応募者がうちを調べたら、何も出てこなかった」<div class="meta">2026-07-13 13時</div></td><td class="nm"><div class="mini"><span style="width:1%"></span></div>5</td><td class="nm sm">0</td><td class="nm sm">2</td></tr><tr class=""><td class="rk">38</td><td class="hk">「ChatGPT、なんか的外れな答えが返ってくる」<div class="meta">2026-07-18 16時</div></td><td class="nm"><div class="mini"><span style="width:1%"></span></div>3</td><td class="nm sm">0</td><td class="nm sm">2</td></tr></tbody></table></div>
+<footer>毎週日曜21時に自動更新 — 鈴木貴大 / 小田原</footer>
+</div></body></html>
