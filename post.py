@@ -23,6 +23,18 @@ def load_topics() -> list[dict]:
         return json.load(f)["topics"]
 
 
+def load_strategy() -> dict:
+    """週次レビューが更新する戦略ファイル。無ければ空dict（コード内の既定値を使う）"""
+    try:
+        with open(BASE_DIR / "strategy.json") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+STRATEGY = load_strategy()
+
+
 def load_real_cases() -> list[dict]:
     """鈴木さんの実際の制作実績のみ。架空の事例は使わない。"""
     try:
@@ -121,7 +133,8 @@ def pick_topic(topics: list[dict], slot_index: int) -> dict:
     """スロットごとに異なるトピックを選ぶ（カテゴリ重み付き）"""
     now = datetime.now()
     random.seed(now.strftime("%Y%m%d") + str(slot_index))
-    weights = [CATEGORY_WEIGHTS.get(t["category"], 1.0) for t in topics]
+    cw = STRATEGY.get("category_weights") or CATEGORY_WEIGHTS
+    weights = [cw.get(t["category"], 1.0) for t in topics]
     return random.choices(topics, weights=weights, k=1)[0]
 
 
@@ -228,7 +241,11 @@ def generate_post(topic: dict, recent_hooks: list[str] = None) -> tuple[str, str
             "body_hint": "悩みの正体をやさしく整理し、「一人で抱えなくていい」という安心につなげる",
         },
     ]
-    style = random.choices(styles, weights=[s["weight"] for s in styles], k=1)[0]
+    # 週次レビューが更新した重みがあればそちらを優先（無ければコード内の既定値）
+    sw = STRATEGY.get("style_weights", {})
+    style = random.choices(
+        styles, weights=[sw.get(s["name"], s["weight"]) for s in styles], k=1
+    )[0]
 
     # CTAの型をローテーション。LINE登録0名 → 「登録する理由（無料プレゼント）」を前面に出す
     # 配布型を主軸にする。相談だけの呼びかけはハードルが高く登録に繋がらないため最小限。
@@ -238,7 +255,10 @@ def generate_post(topic: dict, recent_hooks: list[str] = None) -> tuple[str, str
         ("無CTA型", "CTAを完全に省き、価値提供だけで気持ちよく終える（信頼残高を貯める回）。LINEにもプロフィールにも触れない", 0.15),
         ("相談型", "「まず話すだけでも大丈夫です。気軽にLINEからどうぞ（プロフィールに置いてます）」のような、ハードルを下げた相談呼びかけ", 0.20),
     ]
-    cta = random.choices(cta_types, weights=[c[2] for c in cta_types], k=1)[0]
+    cw = STRATEGY.get("cta_weights", {})
+    cta = random.choices(
+        cta_types, weights=[cw.get(c[0], c[2]) for c in cta_types], k=1
+    )[0]
 
     # 月額伴走プランへの言及（約4割の投稿にだけ入れる。毎回だと売り込み臭くなる）
     mention_plan = random.random() < 0.4
@@ -278,6 +298,10 @@ def generate_post(topic: dict, recent_hooks: list[str] = None) -> tuple[str, str
 ■ コメント1〜2の展開方針：{style["body_hint"]}
 
 {case_block}
+
+【今週の方針（前週の実測データから決定）】
+重点：{STRATEGY.get("focus_note", "読者自身の状況を主語にすること。")}
+回避：{STRATEGY.get("avoid_note", "宣伝色・自慢は出さない。")}
 
 【絶対厳守・嘘をつかない（最優先ルール）】
 - 鈴木さんは「正直・実直」が信条。事実でないことは一切書かない

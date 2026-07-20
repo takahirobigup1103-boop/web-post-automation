@@ -1,0 +1,40 @@
+name: 週次レビュー
+
+# 毎週日曜 21:00 JST（12:00 UTC）に、4役が今週を検討して次週の方針を決める
+on:
+  schedule:
+    - cron: '0 12 * * 0'
+  workflow_dispatch:
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install anthropic requests python-dotenv
+
+      - name: 週次レビュー実行
+        env:
+          TZ: Asia/Tokyo
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python weekly_review.py
+
+      - name: 方針とレポートを保存
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main || true
+          git add strategy.json reports/
+          git diff --staged --quiet || git commit -m "weekly: 週次レビューによる方針更新 [skip ci]"
+          git push
