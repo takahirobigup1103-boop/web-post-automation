@@ -79,6 +79,23 @@ tr.top .rk{color:var(--mikan);font-weight:700}
 .nm.sm{font-weight:400;color:var(--soft)}
 .mini{background:var(--pine-s);height:5px;border-radius:99px;overflow:hidden;margin-bottom:4px;min-width:50px}
 .mini span{display:block;height:100%;background:var(--pine)}
+.directive{border-color:var(--pine);border-width:1.5px}
+.dhint{margin:0 0 11px;font-size:12.5px;color:var(--soft);line-height:1.7}
+.dhint strong{color:var(--pine)}
+#dtext{width:100%;box-sizing:border-box;font-family:var(--f);font-size:14px;line-height:1.65;
+color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;resize:vertical}
+#dtext:focus{outline:2px solid var(--pine);outline-offset:1px;border-color:transparent}
+#dtext::placeholder{color:var(--soft);opacity:.75}
+.drow{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-top:9px}
+#dsend{font-family:var(--f);font-size:13.5px;font-weight:700;color:#F2F7F4;background:var(--pine);
+border:0;border-radius:9px;padding:10px 17px;cursor:pointer}
+#dsend:hover{opacity:.9}
+#dsend:focus-visible{outline:2px solid var(--mikan);outline-offset:2px}
+.dnote{font-size:11.5px;color:var(--soft);flex:1;min-width:0}
+.dex{margin-top:11px}
+.dex summary{font-size:12px;color:var(--soft);cursor:pointer}
+.dex ul{margin:8px 0 0;padding-left:18px}
+.dex li{font-size:12.5px;color:var(--soft);margin-bottom:5px;line-height:1.65}
 footer{margin-top:38px;padding-top:17px;border-top:1px solid var(--line);font-size:11.5px;color:var(--soft);text-align:center}
 @media(max-width:560px){.two{grid-template-columns:1fr}.slot{grid-template-columns:70px 1fr}.sv{grid-column:2;text-align:left;min-width:0}}
 </style>
@@ -87,6 +104,43 @@ footer{margin-top:38px;padding-top:17px;border-top:1px solid var(--line);font-si
 <h1>2026-07-20 の週</h1>
 <p class="sub">4つの役割が実測データを検討し、次週の方針を決定しました。</p>
 <div class="verdict"><b>今週の総括</b>前週の高数値は外れ値1件に支えられた見かけ上の好調であり、今週の数値が現在の実力値に近く、『具体的場面＋損失』を一語で見せるフックが安定的に機能することが改めて確認された週。</div>
+<h2>指示を出す</h2>
+<div class="pane directive">
+  <p class="dhint">今後の方向性を書いて送信すると、AIが解釈して<strong>次の投稿から自動で反映</strong>されます。
+  （例：「動画の話をもっと増やして」「建設業向けを強化」「AIの話は減らして」）</p>
+  <textarea id="dtext" rows="3" placeholder="例）飲食店向けの投稿を増やして、朝の時間帯を厚くしたい"></textarea>
+  <div class="drow">
+    <button id="dsend" type="button">この内容で指示を出す</button>
+    <span id="dnote" class="dnote"></span>
+  </div>
+  <details class="dex">
+    <summary>指示の書き方の例</summary>
+    <ul>
+      <li>「動画制作の話を増やして、実績の話は減らして」</li>
+      <li>「建設業と製造業の社長に刺さる内容を強化したい」</li>
+      <li>「もう少しやわらかい口調にして、売り込み感をさらに減らして」</li>
+      <li>「AIの話は当面やめて、事務作業の悩みに集中して」</li>
+    </ul>
+  </details>
+</div>
+<script>
+(function () {
+  var btn = document.getElementById('dsend');
+  var box = document.getElementById('dtext');
+  var note = document.getElementById('dnote');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var v = (box.value || '').trim();
+    if (!v) { note.textContent = '指示を入力してください'; box.focus(); return; }
+    var url = 'https://github.com/takahirobigup1103-boop/web-post-automation/issues/new'
+      + '?labels=' + encodeURIComponent('指示')
+      + '&title=' + encodeURIComponent('【指示】' + v.slice(0, 40))
+      + '&body=' + encodeURIComponent(v);
+    note.textContent = 'GitHubを開きます。緑の «Create» を押すと反映されます。';
+    window.open(url, '_blank', 'noopener');
+  });
+})();
+</script>
 
 <h2>数字</h2>
 <div class="grid"><div class="card"><div class="k">合計 views</div><div class="v">2,845</div><div class="d down">-3986<span class="pw"> 前週比</span></div></div><div class="card"><div class="k">中央値</div><div class="v">34</div><div class="d down">-48<span class="pw"> 前週比</span></div></div><div class="card"><div class="k">最高</div><div class="v">366</div><div class="d down">-1472<span class="pw"> 前週比</span></div></div><div class="card"><div class="k">リプライ</div><div class="v">82</div><div class="d up">+11<span class="pw"> 前週比</span></div></div><div class="card"><div class="k">いいね</div><div class="v">9</div><div class="d down">-7<span class="pw"> 前週比</span></div></div><div class="card"><div class="k">投稿数</div><div class="v">38</div><div class="d up">+3<span class="pw"> 前週比</span></div></div></div>
