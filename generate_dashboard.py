@@ -25,6 +25,28 @@ def load_reports():
     return [json.loads(Path(f).read_text()) for f in files]
 
 
+def collect_posts(reports) -> list[dict]:
+    """全レポートの投稿を統合（重複除去）。期間切替はこのデータから再計算する。"""
+    seen, out = set(), []
+    for rep in reports:
+        for p in rep.get("posts", []):
+            hook = (p.get("text") or "").split("\n")[0]
+            key = (p["date"], p["hour"], hook[:40])
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append({
+                "d": p["date"],
+                "h": p["hour"],
+                "v": p.get("views", 0),
+                "l": p.get("likes", 0),
+                "r": p.get("replies", 0),
+                "t": hook[:70],
+            })
+    out.sort(key=lambda p: (p["d"], p["h"]))
+    return out
+
+
 def build(reports):
     if not reports:
         return "<p>レポートがまだありません。</p>"
@@ -155,6 +177,12 @@ def build(reports):
 }})();
 </script>'''
 
+    tabs = '''<div class="tabs" role="tablist">
+  <button class="tab" type="button" role="tab" data-period="1" aria-selected="false">1日</button>
+  <button class="tab" type="button" role="tab" data-period="3" aria-selected="false">3日</button>
+  <button class="tab on" type="button" role="tab" data-period="7" aria-selected="true">週間</button>
+</div>'''
+
     return f'''<span class="eyebrow"><i></i>THREADS 週次レポート</span>
 <h1>{latest["date"]} の週</h1>
 <p class="sub">4つの役割が実測データを検討し、次週の方針を決定しました。</p>
@@ -162,29 +190,157 @@ def build(reports):
 {directive_ui}
 
 <h2>数字</h2>
-<div class="grid">{card_html}</div>
+{tabs}
+<div class="grid" id="metrics"></div>
 {trend_html}
 <h2>時間帯別の伸び</h2>
-<div class="pane">{slot_html}</div>
+<div class="pane" id="slots"></div>
 
-<h2>専門家の所見</h2>
+<h2>投稿一覧（<span id="pcount">0</span>件）</h2>
+<div id="postlist"></div>
+
+<h2>専門家の所見<span class="wk">週次</span></h2>
 {voice_html}
 
-<h2>次週の方針</h2>
+<h2>次週の方針<span class="wk">週次</span></h2>
 <div class="two">
 <div class="pane"><div class="k">重点すること</div><p>{esc(r["focus_note"])}</p></div>
 <div class="pane avoid"><div class="k">避けること</div><p>{esc(r["avoid_note"])}</p></div>
 </div>
 <div class="pane" style="margin-top:12px"><div class="k">スタイル配分（次週の投稿に自動反映済み）</div>{sw_html}</div>
 
-<h2>鈴木さんへの提案</h2>
-<div class="pane"><ol>{acts}</ol></div>
+<h2>鈴木さんへの提案<span class="wk">週次</span></h2>
+<div class="pane"><ol>{acts}</ol></div>'''
 
-<h2>今週の全投稿（{len(posts)}件）</h2>
-<div class="tbl"><table>
-<thead><tr><th></th><th>投稿の書き出し</th><th class="ta">views</th><th class="ta">♥</th><th class="ta">返信</th></tr></thead>
-<tbody>{rows}</tbody></table></div>'''
 
+APP_JS = r'''
+(function () {
+  var POSTS = window.__POSTS__ || [];
+  var ANCHOR = window.__ANCHOR__;           // データ内の最新日を「今日」とみなす
+  var PERIODS = { '1': 1, '3': 3, '7': 7 };
+
+  function dayNum(s) {                       // "YYYY-MM-DD" → 経過日数
+    var p = s.split('-');
+    return Math.floor(Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000);
+  }
+  var anchorDay = dayNum(ANCHOR);
+
+  function slice(days, offset) {             // offset=0:今期 / 1:前期
+    var end = anchorDay - days * offset;
+    var start = end - days;
+    return POSTS.filter(function (p) {
+      var d = dayNum(p.d);
+      return d > start && d <= end;
+    });
+  }
+
+  function stats(rows) {
+    if (!rows.length) return null;
+    var v = rows.map(function (p) { return p.v; }).sort(function (a, b) { return a - b; });
+    var mid = Math.floor(v.length / 2);
+    return {
+      total: v.reduce(function (a, b) { return a + b; }, 0),
+      median: v.length % 2 ? v[mid] : Math.round((v[mid - 1] + v[mid]) / 2),
+      max: v[v.length - 1],
+      likes: rows.reduce(function (a, p) { return a + p.l; }, 0),
+      replies: rows.reduce(function (a, p) { return a + p.r; }, 0),
+      count: rows.length
+    };
+  }
+
+  function card(label, now, prev) {
+    var d = '', cls = 'flat';
+    if (prev != null) {
+      var diff = now - prev;
+      if (diff === 0) { d = '±0'; }
+      else { d = (diff > 0 ? '+' : '') + diff; cls = diff > 0 ? 'up' : 'down'; }
+    }
+    var suffix = d ? '<span class="pw"> 前の期間比</span>' : '';
+    return '<div class="card"><div class="k">' + label + '</div><div class="v">'
+      + now.toLocaleString() + '</div><div class="d ' + cls + '">' + d + suffix + '</div></div>';
+  }
+
+  var SLOTS = [[7, 9, '朝7-9'], [10, 12, '午前10-12'], [13, 15, '昼13-15'],
+               [16, 18, '夕16-18'], [20, 23, '夜20-23']];
+
+  function renderSlots(rows) {
+    var groups = SLOTS.map(function (s) {
+      var hit = rows.filter(function (p) { return p.h >= s[0] && p.h <= s[1]; });
+      var avg = hit.length
+        ? Math.round(hit.reduce(function (a, p) { return a + p.v; }, 0) / hit.length) : 0;
+      var max = hit.length ? Math.max.apply(null, hit.map(function (p) { return p.v; })) : 0;
+      return { name: s[2], n: hit.length, avg: avg, max: max };
+    }).filter(function (g) { return g.n > 0; });
+
+    if (!groups.length) return '<p class="empty">この期間のデータがありません</p>';
+    var top = Math.max.apply(null, groups.map(function (g) { return g.avg; })) || 1;
+    return groups.map(function (g) {
+      var best = g.avg === top ? ' best' : '';
+      return '<div class="slot' + best + '"><div class="sn">' + g.name + '</div>'
+        + '<div class="bar"><span style="width:' + Math.round(g.avg / top * 100) + '%"></span></div>'
+        + '<div class="sv">' + g.avg + '<small> 平均 / ' + g.n + '件 / 最高' + g.max + '</small></div></div>';
+    }).join('');
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function renderTable(rows) {
+    if (!rows.length) return '<p class="empty">この期間のデータがありません</p>';
+    var sorted = rows.slice().sort(function (a, b) { return b.v - a.v; });
+    var top = sorted[0].v || 1;
+    var body = sorted.map(function (p, i) {
+      var rank = i < 3 ? ' class="top"' : '';
+      return '<tr' + rank + '><td class="rk">' + (i + 1) + '</td>'
+        + '<td class="hk">' + escapeHtml(p.t) + '<div class="meta">' + p.d + ' ' + p.h + '時</div></td>'
+        + '<td class="nm"><div class="mini"><span style="width:'
+        + Math.round(p.v / top * 100) + '%"></span></div>' + p.v + '</td>'
+        + '<td class="nm sm">' + p.l + '</td><td class="nm sm">' + p.r + '</td></tr>';
+    }).join('');
+    return '<div class="tbl"><table><thead><tr><th></th><th>投稿の書き出し</th>'
+      + '<th class="ta">views</th><th class="ta">♥</th><th class="ta">返信</th></tr></thead>'
+      + '<tbody>' + body + '</tbody></table></div>';
+  }
+
+  function render(key) {
+    var days = PERIODS[key];
+    var cur = slice(days, 0), prev = slice(days, 1);
+    var s = stats(cur), ps = stats(prev);
+
+    var metrics = document.getElementById('metrics');
+    if (!s) {
+      metrics.innerHTML = '<p class="empty">この期間のデータがありません</p>';
+    } else {
+      metrics.innerHTML =
+        card('合計 views', s.total, ps && ps.total) +
+        card('中央値', s.median, ps && ps.median) +
+        card('最高', s.max, ps && ps.max) +
+        card('リプライ', s.replies, ps && ps.replies) +
+        card('いいね', s.likes, ps && ps.likes) +
+        card('投稿数', s.count, ps && ps.count);
+    }
+    document.getElementById('slots').innerHTML = renderSlots(cur);
+    document.getElementById('postlist').innerHTML = renderTable(cur);
+    document.getElementById('pcount').textContent = cur.length;
+
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
+      var on = b.dataset.period === key;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    try { localStorage.setItem('threads_period', key); } catch (e) {}
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
+    b.addEventListener('click', function () { render(b.dataset.period); });
+  });
+
+  var saved = null;
+  try { saved = localStorage.getItem('threads_period'); } catch (e) {}
+  render(PERIODS[saved] ? saved : '7');
+})();
+'''
 
 CSS = '''
 :root{--bg:#F7F8F7;--card:#fff;--ink:#1D2622;--soft:#66746D;--line:#E3E7E4;
@@ -261,6 +417,16 @@ tr.top .rk{color:var(--mikan);font-weight:700}
 .nm.sm{font-weight:400;color:var(--soft)}
 .mini{background:var(--pine-s);height:5px;border-radius:99px;overflow:hidden;margin-bottom:4px;min-width:50px}
 .mini span{display:block;height:100%;background:var(--pine)}
+.tabs{display:inline-flex;gap:3px;background:var(--pine-s);border-radius:11px;padding:3px;margin-bottom:13px}
+.tab{font-family:var(--f);font-size:13px;font-weight:700;color:var(--soft);background:transparent;
+border:0;border-radius:9px;padding:7px 17px;cursor:pointer;transition:background .12s,color .12s}
+.tab:hover{color:var(--ink)}
+.tab.on{background:var(--card);color:var(--pine);box-shadow:var(--sh)}
+.tab:focus-visible{outline:2px solid var(--mikan);outline-offset:1px}
+h2 .wk{font-family:var(--f);font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--soft);
+background:var(--pine-s);padding:3px 9px;border-radius:99px;margin-left:-4px}
+.empty{margin:0;padding:14px 2px;font-size:13px;color:var(--soft);text-align:center}
+@media(prefers-reduced-motion:reduce){.tab{transition:none}}
 .directive{border-color:var(--pine);border-width:1.5px}
 .dhint{margin:0 0 11px;font-size:12.5px;color:var(--soft);line-height:1.7}
 .dhint strong{color:var(--pine)}
@@ -286,20 +452,31 @@ footer{margin-top:38px;padding-top:17px;border-top:1px solid var(--line);font-si
 def main():
     reports = load_reports()
     body = build(reports)
+    posts = collect_posts(reports)
+    anchor = posts[-1]["d"] if posts else datetime.now().strftime("%Y-%m-%d")
+
+    # </script> がデータ内に現れてもHTMLが壊れないようエスケープ
+    data_json = json.dumps(posts, ensure_ascii=False).replace("</", "<\\/")
+    data_script = (f'<script>window.__POSTS__={data_json};'
+                   f'window.__ANCHOR__="{anchor}";</script>')
+
     html = f'''<!doctype html>
 <html lang="ja"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#1F4A42">
-<title>Threads 週次レポート</title>
+<title>Threads レポート</title>
 <style>{CSS}</style>
 </head><body>
 <div class="wrap">{body}
 <footer>毎週日曜21時に自動更新 — 鈴木貴大 / 小田原</footer>
-</div></body></html>'''
+</div>
+{data_script}
+<script>{APP_JS}</script>
+</body></html>'''
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(html)
-    print(f"✓ {OUT} を生成（レポート {len(reports)}週分）")
+    print(f"✓ {OUT} を生成（レポート {len(reports)}週分 / 投稿 {len(posts)}件 / 基準日 {anchor}）")
 
 
 if __name__ == "__main__":
