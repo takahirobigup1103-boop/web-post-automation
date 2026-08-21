@@ -89,6 +89,32 @@ h2 .wk{font-family:var(--f);font-size:10.5px;font-weight:700;letter-spacing:.08e
 background:var(--pine-s);padding:3px 9px;border-radius:99px;margin-left:-4px}
 .empty{margin:0;padding:14px 2px;font-size:13px;color:var(--soft);text-align:center}
 @media(prefers-reduced-motion:reduce){.tab{transition:none}}
+.growth{margin-top:22px}
+.gbanner{background:linear-gradient(135deg,var(--pine),#2b6055);color:#F2F7F4;border-radius:14px;
+padding:16px 19px;font-size:14.5px;line-height:1.75}
+.gbanner b{font-size:17px;color:#fff}
+.ggrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:11px}
+.gcard{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:15px 16px;box-shadow:var(--sh)}
+.gk{font-size:12px;color:var(--soft)}
+.gv{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:4px;line-height:1.25}
+.garrow{color:var(--soft);font-weight:400;margin:0 2px}
+.gd{font-size:15px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
+.gd.up{color:var(--up)}.gd.down{color:var(--down)}
+.gnote{font-size:11.5px;color:var(--soft);margin-top:4px}
+.gchart{width:100%;height:150px;overflow:visible}
+.gchart polyline{fill:none;stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.glm{stroke:var(--mikan)}.glt{stroke:var(--pine);stroke-dasharray:3 2;opacity:.8}
+.gdotm{fill:var(--mikan)}
+.gxlab{display:flex;justify-content:space-between;font-size:11px;color:var(--soft);margin-top:7px}
+.glegend{display:flex;gap:15px;margin-top:9px;font-size:11.5px;color:var(--soft)}
+.lg::before{content:"";display:inline-block;width:14px;height:2px;margin-right:5px;vertical-align:middle}
+.lgm::before{background:var(--mikan)}.lgt::before{background:var(--pine)}
+.glog{padding:4px 17px}
+.glogrow{display:grid;grid-template-columns:52px 1fr;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}
+.glogrow:last-child{border:0}
+.glogd{font-size:12px;font-weight:700;color:var(--mikan);font-variant-numeric:tabular-nums;padding-top:2px}
+.glogv b{font-size:12.5px;color:var(--ink);font-variant-numeric:tabular-nums}
+.glogv p{margin:5px 0 0;font-size:13px;color:var(--soft);line-height:1.7}
 .directive{border-color:var(--pine);border-width:1.5px}
 .dhint{margin:0 0 11px;font-size:12.5px;color:var(--soft);line-height:1.7}
 .dhint strong{color:var(--pine)}
@@ -110,10 +136,37 @@ footer{margin-top:38px;padding-top:17px;border-top:1px solid var(--line);font-si
 @media(max-width:560px){.two{grid-template-columns:1fr}.slot{grid-template-columns:70px 1fr}.sv{grid-column:2;text-align:left;min-width:0}}
 </style>
 </head><body>
-<div class="wrap"><span class="eyebrow"><i></i>THREADS 週次レポート</span>
-<h1>2026-08-16 の週</h1>
-<p class="sub">4つの役割が実測データを検討し、次週の方針を決定しました。</p>
-<div class="verdict"><b>今週の総括</b>中央値・平均ともに前週比65〜79%増と明確な改善を確認、第三者を主語にした具体数字×現在進行形フックが機能しており現行路線の継続と微調整が次週の最適解。</div>
+<div class="wrap"><span class="eyebrow"><i></i>THREADS 運用ダッシュボード</span>
+<h1>2026-08-16 時点</h1>
+<p class="sub">毎日5回投稿し、毎週AIが実測データを検証して方針を改善しています（PDCA自動運転）。</p>
+
+<div class="growth">
+<div class="gbanner">📈 運用開始から5週間で、1投稿の実力値（中央値）が
+<b>34→109</b>（+221%）に成長しました。
+PDCAが機能しています。</div>
+
+<h2>成長サマリー</h2>
+<div class="ggrid"><div class="gcard"><div class="gk">中央値</div><div class="gv">34 <span class="garrow">→</span> 109</div><div class="gd up">+221%</div><div class="gnote">1投稿あたりの実力値</div></div><div class="gcard"><div class="gk">合計 views</div><div class="gv">2,845 <span class="garrow">→</span> 5,775</div><div class="gd up">+103%</div><div class="gnote">週の総リーチ</div></div><div class="gcard"><div class="gk">最高 views</div><div class="gv">366 <span class="garrow">→</span> 849</div><div class="gd up">+132%</div><div class="gnote">その週の一番の伸び</div></div></div>
+
+<h2>週ごとの推移</h2>
+<div class="pane">
+  <svg viewBox="0 0 100 42" preserveAspectRatio="none" class="gchart">
+    <polyline points="0.0,21.3 25.0,22.0 50.0,20.6 75.0,19.4 100.0,0.0" class="glt"/>
+    <polyline points="0.0,28.9 25.0,29.7 50.0,20.8 75.0,20.4 100.0,0.0" class="glm"/><circle cx="0.0" cy="28.9" r="1.3" class="gdotm"/><circle cx="25.0" cy="29.7" r="1.3" class="gdotm"/><circle cx="50.0" cy="20.8" r="1.3" class="gdotm"/><circle cx="75.0" cy="20.4" r="1.3" class="gdotm"/><circle cx="100.0" cy="0.0" r="1.3" class="gdotm"/>
+  </svg>
+  <div class="gxlab"><span>07-20</span><span>07-26</span><span>08-02</span><span>08-09</span><span>08-16</span></div>
+  <div class="glegend"><span class="lg lgm">中央値（実力値）</span><span class="lg lgt">合計views</span></div>
+</div>
+
+<h2>学習の履歴 <span class="wk">毎週AIが検証→改善</span></h2>
+<div class="pane glog"><div class="glogrow"><div class="glogd">08-16</div><div class="glogv"><b>投稿40 / 中央値109 / 最高849</b><p>中央値・平均ともに前週比65〜79%増と明確な改善を確認、第三者を主語にした具体数字×現在進行形フックが機能しており現行路線の継続と微調整が次週の最適解。</p></div></div>
+<div class="glogrow"><div class="glogd">08-09</div><div class="glogv"><b>投稿39 / 中央値56 / 最高517</b><p>平均・最高・likeすべてが前週を上回り、第三者主語＋現在進行形フックの優位性が数字で裏付けられた週。</p></div></div>
+<div class="glogrow"><div class="glogd">08-02</div><div class="glogv"><b>投稿39 / 中央値55 / 最高298</b><p>中央値+20%で底上げは確認できたが、最高値低下とlikes半減が示す通り、リーチの天井突破と共感獲得が次の課題である。</p></div></div>
+<div class="glogrow"><div class="glogd">07-26</div><div class="glogv"><b>投稿40 / 中央値32 / 最高340</b><p>フックの具体性と原則遵守が緩んだことで中央値・平均ともに約4割後退した週。</p></div></div>
+<div class="glogrow"><div class="glogd">07-20</div><div class="glogv"><b>投稿38 / 中央値34 / 最高366</b><p>前週の高数値は外れ値1件に支えられた見かけ上の好調であり、今週の数値が現在の実力値に近く、『具体的場面＋損失』を一語で見せるフックが安定的に機能することが改めて確認された週。</p></div></div></div>
+</div>
+
+<div class="verdict"><b>最新週の総括</b>中央値・平均ともに前週比65〜79%増と明確な改善を確認、第三者を主語にした具体数字×現在進行形フックが機能しており現行路線の継続と微調整が次週の最適解。</div>
 <h2>指示を出す</h2>
 <div class="pane directive">
   <p class="dhint">今後の方向性を書いて送信すると、AIが解釈して<strong>次の投稿から自動で反映</strong>されます。
@@ -152,21 +205,14 @@ footer{margin-top:38px;padding-top:17px;border-top:1px solid var(--line);font-si
 })();
 </script>
 
-<h2>数字</h2>
+<h2>期間別のくわしい数字</h2>
 <div class="tabs" role="tablist">
   <button class="tab" type="button" role="tab" data-period="1" aria-selected="false">1日</button>
   <button class="tab" type="button" role="tab" data-period="3" aria-selected="false">3日</button>
   <button class="tab on" type="button" role="tab" data-period="7" aria-selected="true">週間</button>
 </div>
 <div class="grid" id="metrics"></div>
-<h2>週次の推移</h2>
-<div class="pane">
-  <svg viewBox="0 0 100 40" preserveAspectRatio="none" class="chart">
-    <polyline points="0.0,20.3 25.0,20.9 50.0,19.6 75.0,18.5 100.0,0.0" class="lv"/><polyline points="0.0,27.5 25.0,28.3 50.0,19.8 75.0,19.4 100.0,0.0" class="lm"/><circle cx="0.0" cy="20.3" r="1.1" class="dv"/><circle cx="25.0" cy="20.9" r="1.1" class="dv"/><circle cx="50.0" cy="19.6" r="1.1" class="dv"/><circle cx="75.0" cy="18.5" r="1.1" class="dv"/><circle cx="100.0" cy="0.0" r="1.1" class="dv"/>
-  </svg>
-  <div class="xlab"><span>07-20</span><span>07-26</span><span>08-02</span><span>08-09</span><span>08-16</span></div>
-  <div class="legend"><span class="lg lgv">合計views</span><span class="lg lgm">中央値</span></div>
-</div>
+
 <h2>時間帯別の伸び</h2>
 <div class="pane" id="slots"></div>
 

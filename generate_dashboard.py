@@ -47,12 +47,98 @@ def collect_posts(reports) -> list[dict]:
     return out
 
 
+def build_growth(reports):
+    """PDCAの成長サマリー：5週の推移・改善率・学習履歴を一望する。"""
+    weeks = []
+    for rep in reports:
+        tw = rep["this_week"]
+        weeks.append({
+            "date": rep["date"],
+            "posts": tw["投稿数"],
+            "total": tw["合計views"],
+            "median": tw["中央値"],
+            "max": tw["最高"],
+            "replies": tw["replies計"],
+            "verdict": rep["review"].get("verdict", ""),
+        })
+    if len(weeks) < 2:
+        return ""
+
+    first, last = weeks[0], weeks[-1]
+
+    def pct(a, b):
+        if not a:
+            return ""
+        d = round(b / a * 100 - 100)
+        return f"{'+' if d >= 0 else ''}{d}%"
+
+    # 大きな改善サマリーカード（中央値・合計views・最高）
+    big = [
+        ("中央値", first["median"], last["median"], "1投稿あたりの実力値"),
+        ("合計 views", first["total"], last["total"], "週の総リーチ"),
+        ("最高 views", first["max"], last["max"], "その週の一番の伸び"),
+    ]
+    big_html = ""
+    for label, a, b, note in big:
+        cls = "up" if b >= a else "down"
+        big_html += (
+            f'<div class="gcard"><div class="gk">{label}</div>'
+            f'<div class="gv">{a:,} <span class="garrow">→</span> {b:,}</div>'
+            f'<div class="gd {cls}">{pct(a, b)}</div>'
+            f'<div class="gnote">{note}</div></div>'
+        )
+
+    # 折れ線グラフ（中央値と合計viewsの2系列を正規化して重ねる）
+    W, H = 100, 42
+    step = W / max(len(weeks) - 1, 1)
+    mmax = max(w["median"] for w in weeks) or 1
+    tmax = max(w["total"] for w in weeks) or 1
+    line_m = " ".join(f"{i*step:.1f},{H - w['median']/mmax*H:.1f}" for i, w in enumerate(weeks))
+    line_t = " ".join(f"{i*step:.1f},{H - w['total']/tmax*H:.1f}" for i, w in enumerate(weeks))
+    dots_m = "".join(f'<circle cx="{i*step:.1f}" cy="{H - w["median"]/mmax*H:.1f}" r="1.3" class="gdotm"/>'
+                     for i, w in enumerate(weeks))
+    xlabels = "".join(f"<span>{w['date'][5:]}</span>" for w in weeks)
+
+    chart = f'''<div class="pane">
+  <svg viewBox="0 0 {W} {H}" preserveAspectRatio="none" class="gchart">
+    <polyline points="{line_t}" class="glt"/>
+    <polyline points="{line_m}" class="glm"/>{dots_m}
+  </svg>
+  <div class="gxlab">{xlabels}</div>
+  <div class="glegend"><span class="lg lgm">中央値（実力値）</span><span class="lg lgt">合計views</span></div>
+</div>'''
+
+    # 学習履歴（各週が何を学んだか）＝Actの積み重ね
+    log_rows = "\n".join(
+        f'<div class="glogrow"><div class="glogd">{w["date"][5:]}</div>'
+        f'<div class="glogv"><b>投稿{w["posts"]} / 中央値{w["median"]} / 最高{w["max"]}</b>'
+        f'<p>{esc(w["verdict"])}</p></div></div>'
+        for w in reversed(weeks)
+    )
+
+    return f'''<div class="growth">
+<div class="gbanner">📈 運用開始から{len(weeks)}週間で、1投稿の実力値（中央値）が
+<b>{first['median']}→{last['median']}</b>（{pct(first['median'], last['median'])}）に成長しました。
+PDCAが機能しています。</div>
+
+<h2>成長サマリー</h2>
+<div class="ggrid">{big_html}</div>
+
+<h2>週ごとの推移</h2>
+{chart}
+
+<h2>学習の履歴 <span class="wk">毎週AIが検証→改善</span></h2>
+<div class="pane glog">{log_rows}</div>
+</div>'''
+
+
 def build(reports):
     if not reports:
         return "<p>レポートがまだありません。</p>"
     latest = reports[-1]
     r, tw, lw = latest["review"], latest["this_week"], latest["last_week"]
     posts = latest["posts"]
+    growth_html = build_growth(reports)
 
     # ---- 指標カード ----
     def delta(now, prev):
@@ -183,16 +269,19 @@ def build(reports):
   <button class="tab on" type="button" role="tab" data-period="7" aria-selected="true">週間</button>
 </div>'''
 
-    return f'''<span class="eyebrow"><i></i>THREADS 週次レポート</span>
-<h1>{latest["date"]} の週</h1>
-<p class="sub">4つの役割が実測データを検討し、次週の方針を決定しました。</p>
-<div class="verdict"><b>今週の総括</b>{esc(r["verdict"])}</div>
+    return f'''<span class="eyebrow"><i></i>THREADS 運用ダッシュボード</span>
+<h1>{latest["date"]} 時点</h1>
+<p class="sub">毎日5回投稿し、毎週AIが実測データを検証して方針を改善しています（PDCA自動運転）。</p>
+
+{growth_html}
+
+<div class="verdict"><b>最新週の総括</b>{esc(r["verdict"])}</div>
 {directive_ui}
 
-<h2>数字</h2>
+<h2>期間別のくわしい数字</h2>
 {tabs}
 <div class="grid" id="metrics"></div>
-{trend_html}
+
 <h2>時間帯別の伸び</h2>
 <div class="pane" id="slots"></div>
 
@@ -427,6 +516,32 @@ h2 .wk{font-family:var(--f);font-size:10.5px;font-weight:700;letter-spacing:.08e
 background:var(--pine-s);padding:3px 9px;border-radius:99px;margin-left:-4px}
 .empty{margin:0;padding:14px 2px;font-size:13px;color:var(--soft);text-align:center}
 @media(prefers-reduced-motion:reduce){.tab{transition:none}}
+.growth{margin-top:22px}
+.gbanner{background:linear-gradient(135deg,var(--pine),#2b6055);color:#F2F7F4;border-radius:14px;
+padding:16px 19px;font-size:14.5px;line-height:1.75}
+.gbanner b{font-size:17px;color:#fff}
+.ggrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:11px}
+.gcard{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:15px 16px;box-shadow:var(--sh)}
+.gk{font-size:12px;color:var(--soft)}
+.gv{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:4px;line-height:1.25}
+.garrow{color:var(--soft);font-weight:400;margin:0 2px}
+.gd{font-size:15px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
+.gd.up{color:var(--up)}.gd.down{color:var(--down)}
+.gnote{font-size:11.5px;color:var(--soft);margin-top:4px}
+.gchart{width:100%;height:150px;overflow:visible}
+.gchart polyline{fill:none;stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.glm{stroke:var(--mikan)}.glt{stroke:var(--pine);stroke-dasharray:3 2;opacity:.8}
+.gdotm{fill:var(--mikan)}
+.gxlab{display:flex;justify-content:space-between;font-size:11px;color:var(--soft);margin-top:7px}
+.glegend{display:flex;gap:15px;margin-top:9px;font-size:11.5px;color:var(--soft)}
+.lg::before{content:"";display:inline-block;width:14px;height:2px;margin-right:5px;vertical-align:middle}
+.lgm::before{background:var(--mikan)}.lgt::before{background:var(--pine)}
+.glog{padding:4px 17px}
+.glogrow{display:grid;grid-template-columns:52px 1fr;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}
+.glogrow:last-child{border:0}
+.glogd{font-size:12px;font-weight:700;color:var(--mikan);font-variant-numeric:tabular-nums;padding-top:2px}
+.glogv b{font-size:12.5px;color:var(--ink);font-variant-numeric:tabular-nums}
+.glogv p{margin:5px 0 0;font-size:13px;color:var(--soft);line-height:1.7}
 .directive{border-color:var(--pine);border-width:1.5px}
 .dhint{margin:0 0 11px;font-size:12.5px;color:var(--soft);line-height:1.7}
 .dhint strong{color:var(--pine)}
